@@ -17,7 +17,8 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     install_requires=[
         "youtube-dl==2021.6.6",
-        "discord.py==1.7.3"
+        "discord.py==1.7.3",
+        "PyNaCl==1.4.0"
     ],
     entry_points={
         'console_scripts': [
