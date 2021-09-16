@@ -2,8 +2,35 @@ import asyncio
 import contextlib
 import subprocess
 
+from dataclasses import dataclass
+from functools import lru_cache
+
 from discord import FFmpegPCMAudio
 from discord.ext import commands
+from youtube_dl import YoutubeDL
+
+
+@dataclass
+class YoutubeSong:
+    url: str
+    title: str
+    duration: int
+
+    @classmethod
+    @lru_cache(maxsize=100)
+    def from_url(cls, url):
+        """Make a new YoutubeSong instance by parsing a Youtube url.
+
+        A lru cache is used in order to minimize the number of requests sent to
+        Youtube.
+        """
+        with YoutubeDL() as ydl:
+            infos = ydl.extract_info(url, download=False)
+        return cls(
+            url,
+            infos.get("title", None),
+            infos.get("duration", None)
+        )
 
 
 class Play(commands.Cog):
@@ -46,7 +73,9 @@ class Play(commands.Cog):
         if self._stream_task is None:
             self._stream_task = asyncio.create_task(self._stream())
         # Retrieve the YT song and put it into the playlist.
-        await self._playlist.put(url)
+        song = YoutubeSong.from_url(url)
+        await self._playlist.put(song)
+        await self.bot.command_channel.send(f'"{song.title}" added to queue (duration: {song.duration}s).')
 
     @commands.command(name="n")
     async def next(self, ctx):
@@ -85,11 +114,11 @@ class Play(commands.Cog):
     async def _stream(self):
         """Background task that streams the playlist songs."""
         while True:
-            url = await self._playlist.get()
-            await self.bot.command_channel.send(f"Currently playing: {url}.")
+            song = await self._playlist.get()
+            await self.bot.command_channel.send(f"Currently playing: {song.url}.")
             # We do not use the Python library here because it doesn't provide
             # an easy way to pipe its output.
-            cmd = ["youtube-dl", "-o", "-", url]
+            cmd = ["youtube-dl", "-o", "-", song.url]
             with _run_and_terminate(cmd, stdout=subprocess.PIPE) as ydl:
                 self._skip_song = False
                 # Start the youtube-dl stdout streaming to the voice channel.
