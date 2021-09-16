@@ -11,7 +11,15 @@ class Borgir(commands.Bot):
 
     async def on_ready(self):
         guild = get(self.guilds, name=self._guild_name)
+        if guild is None:
+            print(f'Guild "{self._guild_name}" not found.')
+            await self.close()
+            return
         self.command_channel = get(guild.text_channels, name=self._command_channel_name)
+        if self.command_channel is None:
+            print(f'Channel "{self._command_channel_name}" not found on guild "{self._guild_name}".')
+            await self.close()
+            return
         print(f"{self.user} is now connected to the guild {self._guild_name}.")
 
     async def on_error(self, event, *args, **kwargs):
