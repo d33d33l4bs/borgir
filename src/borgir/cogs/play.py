@@ -43,7 +43,7 @@ class Playlist(asyncio.Queue):
         return self._name
 
     def __iter__(self):
-        return self._queue
+        return iter(self._queue)
 
 
 class Play(commands.Cog):
@@ -66,6 +66,7 @@ class Play(commands.Cog):
         self._voice_client = None
         self._stream_task = None
         self._skip_song = False
+        self._current_song = None
 
     @property
     def is_playing(self):
@@ -105,6 +106,18 @@ class Play(commands.Cog):
         else:
             await self.bot.command_channel.send("Nothing to skip...")
 
+    @commands.command(name="l")
+    async def list(self, ctx):
+        """Lists all the playlist songs."""
+        if self._playlist.qsize() > 0 or self._current_song:
+            await self.bot.command_channel.send("Songs in the playlist:")
+            if self._current_song is not None:
+                await self.bot.command_channel.send(f"{self._current_song.title}")
+            for song in self._playlist:
+                await self.bot.command_channel.send(f"{song.title}")
+        else:
+            await self.bot.command_channel.send("No song in the playlist.")
+
     @commands.command(name="s")
     async def stop(self, ctx):
         """Stops the stream and reset the playlist."""
@@ -116,6 +129,7 @@ class Play(commands.Cog):
             self._stream_task.cancel()
             self._stream_task = None
         self._playlist = asyncio.Queue()
+        self._current_song = None
     
     @commands.command(name="d")
     async def disconnect(self, ctx):
@@ -128,15 +142,17 @@ class Play(commands.Cog):
         if self._stream_task is not None:
             self._stream_task.cancel()
             self._stream_task = None
+        self._playlist = asyncio.Queue()
+        self._current_song = None
 
     async def _stream(self):
         """Background task that streams the playlist songs."""
         while True:
-            song = await self._playlist.get()
-            await self.bot.command_channel.send(f"Currently playing: {song.url}.")
+            self._current_song = await self._playlist.get()
+            await self.bot.command_channel.send(f"Currently playing: {self._current_song.url}.")
             # We do not use the Python library here because it doesn't provide
             # an easy way to pipe its output.
-            cmd = ["youtube-dl", "-o", "-", song.url]
+            cmd = ["youtube-dl", "-o", "-", self._current_song.url]
             with _run_and_terminate(cmd, stdout=subprocess.PIPE) as ydl:
                 self._skip_song = False
                 # Start the youtube-dl stdout streaming to the voice channel.
