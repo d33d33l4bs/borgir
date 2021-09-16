@@ -10,7 +10,7 @@ DEFAULT_EXTENSIONS = [
 
 def main():
     parser = argparse.ArgumentParser(description="Borgir!")
-    parser.add_argument("--discord-token", required=True)
+    parser.add_argument("--token", required=True)
     parser.add_argument("--guild", required=True)
     parser.add_argument("--command-channel", required=True)
     parser.add_argument("--command-prefix", default="!")
@@ -20,7 +20,7 @@ def main():
     bot = Borgir(args.guild, args.command_channel, args.command_prefix)
     for extension in args.extensions:
         bot.load_extension(extension)
-    bot.run(args.discord_token)
+    bot.run(args.token)
 
 
 if __name__ == "__main__":
