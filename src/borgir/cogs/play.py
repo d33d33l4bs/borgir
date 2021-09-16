@@ -33,6 +33,19 @@ class YoutubeSong:
         )
 
 
+class Playlist(asyncio.Queue):
+    def __init__(self, name, maxsize=0):
+        super().__init__(maxsize)
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
+
+    def __iter__(self):
+        return self._queue
+
+
 class Play(commands.Cog):
     """
     Attributes
@@ -49,7 +62,7 @@ class Play(commands.Cog):
     """
     def __init__(self, bot):
         self.bot = bot
-        self._playlist = asyncio.Queue()
+        self._playlist = Playlist("default")
         self._voice_client = None
         self._stream_task = None
         self._skip_song = False
