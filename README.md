@@ -7,5 +7,5 @@ $ pip install .
 # Run it!
 
 ```bash
-$ borgir --discord-token TOKEN --command-channel music
+$ borgir --token TOKEN --guild GUILD --command-channel CHAN
 ```
