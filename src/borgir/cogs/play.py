@@ -42,6 +42,11 @@ class Playlist(asyncio.Queue):
     def name(self):
         return self._name
 
+    def clear(self):
+        for _ in range(self.qsize()):
+            self.get_nowait()
+            self.task_done()
+
     def __iter__(self):
         return iter(self._queue)
 
@@ -128,7 +133,7 @@ class Play(commands.Cog):
         if self._stream_task is not None:
             self._stream_task.cancel()
             self._stream_task = None
-        self._playlist = asyncio.Queue()
+        self._playlist.clear()
         self._current_song = None
     
     @commands.command(name="d")
@@ -136,19 +141,16 @@ class Play(commands.Cog):
         """Disconnects the bot from the voice channel."""
         if ctx.message.channel != self.bot.command_channel:
             return
+        await self.stop(ctx)
         if self._voice_client is not None:
             await self._voice_client.disconnect()
             self._voice_client = None
-        if self._stream_task is not None:
-            self._stream_task.cancel()
-            self._stream_task = None
-        self._playlist = asyncio.Queue()
-        self._current_song = None
 
     async def _stream(self):
         """Background task that streams the playlist songs."""
         while True:
             self._current_song = await self._playlist.get()
+            self._playlist.task_done()
             await self.bot.command_channel.send(f"Currently playing: {self._current_song.url}.")
             # We do not use the Python library here because it doesn't provide
             # an easy way to pipe its output.
@@ -162,6 +164,7 @@ class Play(commands.Cog):
                 while self._voice_client.is_playing() and not self._skip_song:
                     await asyncio.sleep(1)
                 self._voice_client.stop()
+                self._current_song = None
 
 
 def setup(bot):
