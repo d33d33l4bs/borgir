@@ -95,8 +95,11 @@ class Play(commands.Cog):
         except:
             await self.bot.command_channel.send("An error occured with your url.")
             return
-        # Make a new voice channel if needed.
+        # Make a new voice connection if needed.
         if self._voice_client is None:
+            if ctx.message.author.voice is None:
+                await self.bot.command_channel.send("You're not connected to a voice channel...")
+                return
             channel = ctx.message.author.voice.channel
             self._voice_client = await channel.connect()
         # Run the background task if needed.
