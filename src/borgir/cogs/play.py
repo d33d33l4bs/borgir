@@ -43,9 +43,14 @@ class Playlist(asyncio.Queue):
         return self._name
 
     def clear(self):
-        for _ in range(self.qsize()):
-            self.get_nowait()
-            self.task_done()
+        self._queue.clear()
+        self._wakeup_next(self._putters)
+
+    async def get(self):
+        item = await super().get()
+        # We don't care about tasks.
+        self.task_done()
+        return item
 
     def __iter__(self):
         return iter(self._queue)
@@ -150,7 +155,6 @@ class Play(commands.Cog):
         """Background task that streams the playlist songs."""
         while True:
             self._current_song = await self._playlist.get()
-            self._playlist.task_done()
             await self.bot.command_channel.send(f"Currently playing: {self._current_song.url}.")
             # We do not use the Python library here because it doesn't provide
             # an easy way to pipe its output.
