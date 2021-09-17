@@ -89,23 +89,33 @@ class Play(commands.Cog):
         """Adds a new song to the playlist and run the streaming task."""
         if ctx.message.channel != self.bot.command_channel:
             return
+
+        # Check if the author is in a good voice channel.
+        voice = ctx.message.author.voice
+        if voice is None:
+            await self.bot.command_channel.send("You're not connected to a voice channel...")
+            return
+        elif self._voice_client and voice.channel != self._voice_client.channel:
+            await self.bot.command_channel.send("You're not connected to my voice channel...")
+            return
+
         # Retrieve the YT song.
         try:
             song = YoutubeSong.from_url(url)
         except:
             await self.bot.command_channel.send("An error occured with your url.")
             return
-        # Make a new voice connection if needed.
+
+        # Make a new voice client if needed.
         if self._voice_client is None:
-            if ctx.message.author.voice is None:
-                await self.bot.command_channel.send("You're not connected to a voice channel...")
-                return
             channel = ctx.message.author.voice.channel
             self._voice_client = await channel.connect()
-        # Run the background task if needed.
+
+        # Run the streaming background task.
         if self._stream_task is None:
             self._stream_task = asyncio.create_task(self._stream())
-        # Put the song into the playlist.
+
+        # Add the new song into the playlist.
         await self._playlist.put(song)
         await self.bot.command_channel.send(f'"{song.title}" added to queue (duration: {song.duration}s).')
 
